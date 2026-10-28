@@ -1,0 +1,468 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0b34e91f-107e-4bb2-aaef-eb110a7be5b7",
+              "name": "emailBody",
+              "value": "={{ $ifEmpty($json.body.html,$json.body.text).removeTags()  }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        848,
+        0
+      ],
+      "id": "f8f446e9-f902-4e6e-9457-f5e425d7b39a",
+      "name": "RemoveTags"
+    },
+    {
+      "parameters": {
+        "url": "https://api.instantly.ai/api/v2/emails",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "10"
+            },
+            {
+              "name": "search",
+              "value": "={{ $json.lead }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_API_TOKEN"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Get Conversation History",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        192,
+        0
+      ],
+      "id": "b3c3181d-5556-4f5f-9693-c50c6aa64957"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.instantly.ai/api/v2/emails/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_API_TOKEN"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2000,
+        0
+      ],
+      "id": "adddb882-7e1c-4ad3-9cf4-357ee45c0742",
+      "name": "Send Reply"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d405d727-a8a2-45c7-983c-2fad5bfb7b00",
+              "leftValue": "={{ $json.Subject }}",
+              "rightValue": "may have sent a positive reply",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -208,
+        16
+      ],
+      "id": "280f827e-b5b7-4cb4-8da5-39055a18863b",
+      "name": "Instantly reply message ?"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Lead's name : {{ $json.first_name }}\nLead's email : {{ $('getLead').item.json.lead }}\nConversation with the Lead: {{ $('Aggregate').item.json.emailBody }}\nCompany's lead : {{ $json.payload.companyName }}\nCompany description : {{ $json.payload.company_description}}\nLead LinkedIn headline : {{ $json.payload.headline }}\nCompany website : {{ $json.payload.website }}",
+        "options": {
+          "systemMessage": "=Your job is to draft a succinct, tactful, commercially-minded next message (reply) to the message thread below, writing as a lead at an AI agency.\n\n1.\tRole & tone\n\n• You work with Symplify AI.\n• Write in first person ('I', 'we').\n• Tone: concise, confident, friendly, non-corporate, and outcome-focused. No em dashes (eliminate all —s)\n• No over-explaining, no hype, no filler, not too long.\n• Never repeat our offer, you are responding to a lead that wants to know more, the objective is to book the call.\n• If the message is a followup to a previous one we sent, be light but persistent & illustrate our value props. In this case, do not introduce yourself. \n• Finally, if the message is something negative, like \"DO NOT EMAIL ME AGAIN\" or \"UNSUBSCRIBE\" or \"remove me from mailing list\" or some variant thereof, reply saying something like \"Thanks for your reply, no problem.\".\n\n2.\tDeep context + web lookup\n\nBefore drafting the reply, you must:\n1. Read the previous message carefully!\n2. Identify any missing but important context (e.g., who they are, what they do, location, services mentioned, tools/terms you don't recognize).\n3. Use the context to know more about :\n• The sender and their company/clinic.\n• Any products, tools, locations, that sound useful.\n4. Use this step to better tailor the reply : If needed you can use the \"HTTP Request\" tool to check the website of the lead\n\nIf crucial information is still unknown and cannot be reliably inferred or researched, write a brief, tactful reply that:\n• Moves the conversation forward, and\n• Asks at most one or two precise clarifying questions.\n\n3. KNOWLEDGE BASE ABOUT THIS CAMPAIGN\nThe offer : Help your clinic fill up slots by booking appointments 24/7 automatically without relying on your staff’s availability to check the phone.. even on a PH or midnight.\nThe Target : Clinic owner (dental, beauty, medical...)\nThe outreach messages sent : \na. \"Hi, I’m Darryl from Symplify AI.\n\nIf we can help your clinic fill up slots by booking appointments 24/7 automatically without relying on your staff’s availability to check the phone.. even on a PH or midnight. \n\nHow does that sound? \n\nWe’re waiving $3,000 set-up fee for 3 clinics this month to get it installed and work within 48 hours. Interested to see the demo? :)\"\n\nb. \"Hi, 78% of patients book with the first clinic that responds.\n\nIf your team replies the next morning, those patients are already booked elsewhere.\n\nOur AI responds instantly and locks in the booking — 2am or 2pm, any day of the week.\n\nClinics we work with see 20–35% more bookings within 30 days.\"\n\n4.\tINFORMATION ABOUT THIS LEAD\n\nUse all information to ground your reply. This is specific to the lead you are replying to. Do not copy it verbatim unless context makes it natural \n\n5.\tOutput format\n\n• Do not include any meta-commentary, analysis, bullets, or headings in the email body itself.\n• Do not talk about any PDF or document about lead magnet, proposal etc.\n• Keep it tight: generally 3–8 sentences, unless the thread clearly requires more detail.\n• Output only the final email reply body as HTML.\n• Use minimal HTML: plain text with <br> for line breaks and <br><br> between paragraphs.\n• Do not wrap the content in <html>, <body>, or <p> tags.\n• Do not use \\n ever.\n• Always send this link to make call booking easier : https://app.usemotion.com/meet/symplifyai/consult \n• Make sure to sign off with your name at the end (it will be the first name in your email address).\n• Output example : \"<!DOCTYPE html>\\n<html>\\n  <head>\\n    <meta charset=\\\"UTF-8\\\">\\n    <title>Re: , quick question</title>\\n  </head>\\n  <body>\\n  <strong>Thanks Rachel, glad this caught your interest!</strong><br><br>A 24/7 booking system would mean your patients can book in even after 5:30pm or on weekends when your team is offline. We've seen practices like yours recover 20-35% more bookings in the first month just by never missing a phone call.<br><br>Do you have 15 minutes this week to see how it works? Here's a link to grab a time that suits you:<br><br><a href=\\\"https://app.usemotion.com/meet/symplifyai/consult\\\">https://app.usemotion.com/meet/symplifyai/consult</a><br><br>Darryl</body>\\n</html>\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1488,
+        0
+      ],
+      "id": "473c61c7-3753-48f3-a2a9-fc23ed094ce6",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        624,
+        0
+      ],
+      "id": "c3ff9285-418c-4262-98be-8b257552bfe7",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "emailBody"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1072,
+        0
+      ],
+      "id": "4ddedc8c-51b4-4c9d-a88c-f60efe6330b7",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        400,
+        0
+      ],
+      "id": "2519eff6-21d7-4e38-a9a6-0d4bba439481",
+      "name": "Wait",
+      "webhookId": "1b8ee653-cb15-4110-ac07-fc52eb29871b"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "43e3c1fd-88a6-4d45-8494-3b456199853b",
+              "name": "lead",
+              "value": "={{ $json.Subject.split(\" \")[0] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "07d47e72-5904-4811-b375-9b5e04e390a8",
+      "name": "getLead"
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "operation": "get",
+        "leadId": {
+          "__rl": true,
+          "value": "={{ $('Get Conversation History').item.json.items[0].lead_id }}",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-instantly.instantly",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        0
+      ],
+      "id": "bf6d0bc5-f365-4ad0-b51e-f0ee1f4e3660",
+      "name": "Get a lead"
+    },
+    {
+      "parameters": {
+        "url": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('URL', ``, 'string') }}",
+        "options": {},
+        "optimizeResponse": true,
+        "responseType": "html",
+        "onlyContent": true,
+        "truncateResponse": true,
+        "maxLength": 400000
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1616,
+        208
+      ],
+      "id": "b455827d-0d42-42a6-b95b-56379b4fa26b",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.output;\n\nreturn [{\n  json: {\n    eaccount: $('Get a lead').first().json.last_contacted_from,\n    reply_to_uuid: $('Get Conversation History').first().json.items[0].id,\n    subject: $('Get Conversation History').first().json.items[1].subject,\n    body: {\n      text: output\n    }\n  }\n  \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        0
+      ],
+      "id": "98fe751f-801f-4c3b-bf8d-3f76c1bdd3f6",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "readStatus": "unread",
+          "sender": "notifications@nt1.instantly.ai"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -432,
+        16
+      ],
+      "id": "18909e0b-3859-436a-ac91-aae901b4f6a6",
+      "name": "Gmail Trigger"
+    },
+    {
+      "parameters": {
+        "content": "## OpenAI free credits in use\nDo not forget to change account",
+        "height": 96,
+        "width": 352
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1344,
+        336
+      ],
+      "typeVersion": 1,
+      "id": "ac8c2cd2-579f-4dcd-89ed-58a7c77cbab1",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1488,
+        208
+      ],
+      "id": "b056a99f-effc-460f-b823-9a5805fc86f2",
+      "name": "OpenAI Chat Model"
+    }
+  ],
+  "connections": {
+    "RemoveTags": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Conversation History": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instantly reply message ?": {
+      "main": [
+        [
+          {
+            "node": "getLead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "RemoveTags",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Get a lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "getLead": {
+      "main": [
+        [
+          {
+            "node": "Get Conversation History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a lead": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Instantly reply message ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "cefe56c87c60f6703897acb1b3bae1a73dcd4da3f0e70a0b95c4f459e9c6f5d9"
+  }
+}
